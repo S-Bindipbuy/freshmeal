@@ -1,0 +1,30 @@
+[tools]
+flutter = "3.41.1"
+
+[tasks.build-web]
+description = "Build Flutter web release"
+run = "flutter build web --release"
+
+[tasks.build-apk]
+description = "Build Flutter Android APK"
+run = "flutter build apk --release"
+
+[tasks.build-appbundle]
+description = "Build Flutter Android App Bundle"
+run = "flutter build appbundle --release"
+
+[tasks.build-ios]
+description = "Build Flutter iOS app"
+run = "flutter build ios --release"
+
+[tasks.build-macos]
+description = "Build Flutter macOS app"
+run = "flutter build macos --release"
+
+[tasks.build-windows]
+description = "Build Flutter Windows app"
+run = "flutter build windows --release"
+
+[tasks.build-linux]
+description = "Build Flutter Linux app"
+run = "flutter build linux --release"
