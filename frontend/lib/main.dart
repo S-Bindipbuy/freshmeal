@@ -5,11 +5,9 @@ import 'package:frontend/register_screen.dart';
 import 'package:frontend/dashboard_screen.dart';
 
 void main() {
-  final order = orderScreen();
-
-  final dashboard = dashboardScreen();
-
-  final register = registerScreen();
+  orderScreen();
+  dashboardScreen();
+  registerScreen();
 
   final login = loginScreen();
 
