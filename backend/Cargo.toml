@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+<<<<<<< HEAD
 actix-web = "4"
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
@@ -18,3 +19,5 @@ actix-multipart = "0.7.2"
 futures-util = "0.3.32"
 uuid = { version = "1", features = ["v4"] }
 actix-files = "0.6.10"
+=======
+>>>>>>> refs/remotes/origin/main
