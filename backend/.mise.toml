@@ -1,0 +1,14 @@
+[tools]
+postgres = "18.3"
+rust = "1.94.0"
+
+[tasks.build]
+description = "Build Release Program"
+run = "cargo build --release"
+
+[tasks.run]
+description = "Build and Run"
+run = "cargo run --release"
+
+[env]
+SQLX_OFFLINE=true

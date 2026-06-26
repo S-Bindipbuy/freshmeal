@@ -1,0 +1,40 @@
+name: frontend
+description: "A new Flutter project."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  rhttp: ^0.18.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  file_picker: ^11.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/profile.png
+    - assets/burgerBanner.png
+  fonts:
+    - family: Poetsen
+      fonts:
+        - asset: fonts/PoetsenOne-Regular.ttf
+    - family: Poppin
+      fonts:
+        - asset: fonts/Poppins-Medium.ttf
+    - family: MochiyPop
+      fonts:
+        - asset: fonts/MochiyPopOne-Regular.ttf
