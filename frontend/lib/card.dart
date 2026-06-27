@@ -3,7 +3,6 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'database_service.dart';
 import 'product_detail_screen.dart';
-import 'rhttp_cache_manager.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;

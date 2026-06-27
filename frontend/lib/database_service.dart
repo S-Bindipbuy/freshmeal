@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:rhttp/rhttp.dart' as rhttp;
+import 'package:http/http.dart' as http;
 
 class Product {
   final String id;
@@ -83,22 +83,20 @@ class DatabaseService {
   }
 
   static String? _token;
-  static rhttp.RhttpClient? _client;
+  static http.Client? _client;
 
-  static rhttp.RhttpClient get client {
-    return _client ??= rhttp.RhttpClient.createSync(
-      settings: const rhttp.ClientSettings(throwOnStatusCode: false),
-    );
+  static http.Client get client {
+    return _client ??= http.Client();
   }
 
-  static void setClient(rhttp.RhttpClient customClient) {
+  static void setClient(http.Client customClient) {
     _client = customClient;
   }
 
   static Future<List<Product>> getProducts() async {
     try {
       final response = await client
-          .get('$_normalizedBaseUrl/products')
+          .get(Uri.parse('$_normalizedBaseUrl/products'))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         List<dynamic> data = json.decode(response.body);
@@ -118,9 +116,9 @@ class DatabaseService {
     try {
       final response = await client
           .get(
-            '$_normalizedBaseUrl/orders',
+            Uri.parse('$_normalizedBaseUrl/orders'),
             headers: _token != null
-                ? rhttp.HttpHeaders.rawMap({'Authorization': 'Bearer $_token'})
+                ? {'Authorization': 'Bearer $_token'}
                 : null,
           )
           .timeout(const Duration(seconds: 5));
@@ -143,12 +141,12 @@ class DatabaseService {
     try {
       final response = await client
           .post(
-            '$_normalizedBaseUrl/orders',
-            headers: rhttp.HttpHeaders.rawMap({
+            Uri.parse('$_normalizedBaseUrl/orders'),
+            headers: {
               'Content-Type': 'application/json',
               if (_token != null) 'Authorization': 'Bearer $_token',
-            }),
-            body: rhttp.HttpBody.json({
+            },
+            body: json.encode({
               'product_id': productId,
               'quantity': quantity,
             }),
@@ -170,11 +168,11 @@ class DatabaseService {
     try {
       final response = await client
           .post(
-            '$_normalizedBaseUrl/login',
-            headers: rhttp.HttpHeaders.rawMap({
+            Uri.parse('$_normalizedBaseUrl/login'),
+            headers: const {
               'Content-Type': 'application/json',
-            }),
-            body: rhttp.HttpBody.json({'email': email, 'password': password}),
+            },
+            body: json.encode({'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 5));
 
@@ -200,11 +198,11 @@ class DatabaseService {
     try {
       final response = await client
           .post(
-            '$_normalizedBaseUrl/register',
-            headers: rhttp.HttpHeaders.rawMap({
+            Uri.parse('$_normalizedBaseUrl/register'),
+            headers: const {
               'Content-Type': 'application/json',
-            }),
-            body: rhttp.HttpBody.json({
+            },
+            body: json.encode({
               'name': username,
               'email': email,
               'password': password,
@@ -227,9 +225,9 @@ class DatabaseService {
     try {
       final response = await client
           .get(
-            '$_normalizedBaseUrl/profile',
+            Uri.parse('$_normalizedBaseUrl/profile'),
             headers: _token != null
-                ? rhttp.HttpHeaders.rawMap({'Authorization': 'Bearer $_token'})
+                ? {'Authorization': 'Bearer $_token'}
                 : null,
           )
           .timeout(const Duration(seconds: 5));
@@ -250,20 +248,20 @@ class DatabaseService {
 
   static Future<String> uploadAvatar(Uint8List s, String filename) async {
     try {
-      final request = await client.post(
-        '$_normalizedBaseUrl/profile/avatar',
-        headers: rhttp.HttpHeaders.rawMap({'Authorization': 'Bearer $_token'}),
-        body: rhttp.HttpBody.multipart({
-          'avatar': rhttp.MultipartItem.bytes(bytes: s, fileName: filename),
-        }),
-      );
+      var request = http.MultipartRequest('POST', Uri.parse('$_normalizedBaseUrl/profile/avatar'));
+      if (_token != null) {
+        request.headers['Authorization'] = 'Bearer $_token';
+      }
+      request.files.add(http.MultipartFile.fromBytes('avatar', s, filename: filename));
 
-      final response = request.body;
-      if (request.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response);
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 15));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
         return data['avatar'] ?? '';
       } else {
-        throw Exception('Server returned ${request.statusCode}: $response');
+        throw Exception('Server returned ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       log("Error uploading avatar: $e");

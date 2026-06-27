@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'database_service.dart';
 import 'order_screen.dart';
-import 'rhttp_cache_manager.dart';
+import 'http_cache_manager.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -39,7 +39,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Hero(
               tag: widget.heroTag,
               child: CachedNetworkImage(
-                cacheManager: RhttpCacheManager.instance,
+                cacheManager: HttpCacheManager.instance,
                 imageUrl: widget.product.image,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(

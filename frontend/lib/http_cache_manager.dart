@@ -1,42 +1,36 @@
 import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter_cache_manager/src/web/mime_converter.dart';
 import 'package:frontend/database_service.dart';
-import 'package:rhttp/rhttp.dart' as rhttp;
+import 'package:http/http.dart' as http;
 
-/// A custom [FileService] that fetches files (images) using the shared [rhttp.RhttpClient].
-class RhttpFileService extends FileService {
+/// A custom [FileService] that fetches files (images) using the shared [http.Client].
+class HttpFileService extends FileService {
   @override
   Future<FileServiceResponse> get(String url, {Map<String, String>? headers}) async {
-    final response = await DatabaseService.client.getStream(
-      url,
-      headers: headers != null ? rhttp.HttpHeaders.rawMap(headers) : null,
-    );
-    return RhttpFileServiceResponse(response);
+    final request = http.Request('GET', Uri.parse(url));
+    if (headers != null) {
+      request.headers.addAll(headers);
+    }
+    final streamedResponse = await DatabaseService.client.send(request);
+    return HttpFileServiceResponse(streamedResponse);
   }
 }
 
-/// A [FileServiceResponse] wrapper around [rhttp.HttpStreamResponse].
-class RhttpFileServiceResponse implements FileServiceResponse {
-  final rhttp.HttpStreamResponse _response;
+/// A [FileServiceResponse] wrapper around [http.StreamedResponse].
+class HttpFileServiceResponse implements FileServiceResponse {
+  final http.StreamedResponse _response;
   final DateTime _receivedTime = DateTime.now();
 
-  RhttpFileServiceResponse(this._response);
+  HttpFileServiceResponse(this._response);
 
   @override
   int get statusCode => _response.statusCode;
 
   @override
-  Stream<List<int>> get content => _response.body;
+  Stream<List<int>> get content => _response.stream;
 
   @override
-  int? get contentLength {
-    final lengthHeader = _getHeader('content-length');
-    if (lengthHeader != null) {
-      return int.tryParse(lengthHeader);
-    }
-    return null;
-  }
+  int? get contentLength => _response.contentLength;
 
   @override
   DateTime get validTill {
@@ -77,7 +71,9 @@ class RhttpFileServiceResponse implements FileServiceResponse {
     if (contentTypeString != null) {
       try {
         final contentType = ContentType.parse(contentTypeString);
-        return contentType.fileExtension;
+        final subType = contentType.subType.toLowerCase();
+        if (subType == 'jpeg') return '.jpg';
+        return '.$subType';
       } catch (_) {}
     }
     return '.jpg';
@@ -85,7 +81,7 @@ class RhttpFileServiceResponse implements FileServiceResponse {
 
   String? _getHeader(String name) {
     final lowercaseName = name.toLowerCase();
-    for (final entry in _response.headerMap.entries) {
+    for (final entry in _response.headers.entries) {
       if (entry.key.toLowerCase() == lowercaseName) {
         return entry.value;
       }
@@ -94,16 +90,16 @@ class RhttpFileServiceResponse implements FileServiceResponse {
   }
 }
 
-/// A global singleton for [CacheManager] configured to use the high-performance [RhttpFileService].
-class RhttpCacheManager {
-  static const key = 'rhttpCacheKey';
+/// A global singleton for [CacheManager] configured to use the high-performance [HttpFileService].
+class HttpCacheManager {
+  static const key = 'httpCacheKey';
 
   static final CacheManager instance = CacheManager(
     Config(
       key,
       stalePeriod: const Duration(days: 7),
       maxNrOfCacheObjects: 200,
-      fileService: RhttpFileService(),
+      fileService: HttpFileService(),
     ),
   );
 }
