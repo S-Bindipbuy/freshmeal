@@ -111,6 +111,24 @@ pub enum OrderStatus {
     Cancelled,
 }
 
+#[derive(Debug, sqlx::Type, Serialize, Deserialize, Clone)]
+#[sqlx(type_name = "role", rename_all = "lowercase")]
+pub enum Role {
+    Admin,
+    Customer,
+    Restaurant,
+}
+
+impl fmt::Display for Role {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Role::Admin => write!(f, "admin"),
+            Role::Customer => write!(f, "customer"),
+            Role::Restaurant => write!(f, "restaurant"),
+        }
+    }
+}
+
 #[derive(Clone)]
 struct AppConfiguration {
     db_pool: Pool<Postgres>,
@@ -130,7 +148,7 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub password_hash: String,
-    pub role: String,
+    pub role: Role,
     pub avatar: Option<String>,
 }
 
@@ -251,7 +269,7 @@ async fn register(
             let claims = Claims {
                 email: u.email.clone(),
                 exp,
-                role: u.role.clone(),
+                role: u.role.to_string(),
             };
 
             let token = encode(
@@ -292,7 +310,7 @@ async fn login(
             let claims = Claims {
                 email: u.email.clone(),
                 exp,
-                role: u.role.clone(),
+                role: u.role.to_string(),
             };
 
             let token = encode(
@@ -363,16 +381,20 @@ async fn insert_product(
                 }
             }
             Some("image") => {
+                let file_extension = field
+                    .content_disposition()
+                    .and_then(|c| c.get_filename_ext().map(|s| s.to_string()))
+                    .unwrap_or("jpg".to_string());
                 let _ = fs::create_dir_all("uploads/").await;
                 let file_name = Uuid::new_v4();
-                let path = format!("uploads/{}.jpg", file_name);
+                let path = format!("uploads/{}.{}", file_name, file_extension);
                 let mut f = File::create(&path).await?;
 
                 while let Some(chunk) = field.next().await {
                     f.write_all(&chunk?).await?;
                 }
 
-                img = file_name.to_string();
+                img = format!("{}.{}", file_name, file_extension);
             }
             _ => {}
         }
@@ -554,8 +576,16 @@ pub struct ProfileResponse {
     pub id: i64,
     pub email: String,
     pub name: String,
-    pub role: String,
+    pub role: Role,
     pub avatar: Option<String>,
+}
+
+#[derive(Serialize, FromRow)]
+pub struct CustomerResponse {
+    pub id: i64,
+    pub name: String,
+    pub email: String,
+    pub created_at: NaiveDateTime,
 }
 
 #[get("/profile")]
@@ -576,6 +606,24 @@ async fn get_profile(
         role: row.get(3),
         avatar: row.get(4),
     }))
+}
+
+#[get("/customer")]
+async fn get_customers(
+    claims: Claims,
+    config: Data<AppConfiguration>,
+) -> Result<HttpResponse, AppError> {
+    if claims.role != "admin" {
+        return Err(AppError::Forbidden("Admin access required".into()));
+    }
+
+    let customers = sqlx::query_as::<_, CustomerResponse>(
+        "SELECT id, name, email, created_at FROM users WHERE role = 'customer' ORDER BY created_at DESC"
+    )
+    .fetch_all(&config.db_pool)
+    .await?;
+
+    Ok(HttpResponse::Ok().json(customers))
 }
 
 #[get("/admin/revenue/monthly")]
@@ -682,6 +730,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_orders)
             .service(order_history)
             .service(get_profile)
+            .service(get_customers)
             .service(upload_avatar)
             .service(get_monthly_revenue)
             .service(get_yearly_revenue)

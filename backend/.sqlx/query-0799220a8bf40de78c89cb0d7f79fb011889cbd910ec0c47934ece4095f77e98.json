@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO order_items (order_id, product_id, quantity, price_at_time)\n                VALUES ($1, $2, $3, $4)\n                ON CONFLICT (order_id, product_id) \n                DO UPDATE SET quantity = order_items.quantity + EXCLUDED.quantity\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int4",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0799220a8bf40de78c89cb0d7f79fb011889cbd910ec0c47934ece4095f77e98"
+}

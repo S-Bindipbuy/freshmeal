@@ -25,7 +25,8 @@ CREATE TABLE users (
     name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role role NOT NULL DEFAULT 'customer',
-    avatar TEXT NULL
+    avatar TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE products (
@@ -88,3 +89,8 @@ FROM orders
 WHERE status IN ('paid', 'delivered')
 GROUP BY year
 ORDER BY year DESC;
+
+-- Default admin user (password: admin123)
+INSERT INTO users (email, name, password_hash, role) 
+VALUES ('admin@freshmeal.com', 'Admin', '$2a$12$/iS0sL7dKiBJL/fhCdErzeZ6oJ3FRbNFG2BBrnEtreTsdHIquQQQ2', 'admin')
+ON CONFLICT (email) DO NOTHING;

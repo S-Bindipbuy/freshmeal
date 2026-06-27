@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE orders \n        SET total = (\n            SELECT SUM(quantity * price_at_time) \n            FROM order_items \n            WHERE order_id = $1\n        )\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9d50dbfb4987ee4f43459b647eb3968ba3b2d91242d0994d91ca8e1b8c1f6e79"
+}

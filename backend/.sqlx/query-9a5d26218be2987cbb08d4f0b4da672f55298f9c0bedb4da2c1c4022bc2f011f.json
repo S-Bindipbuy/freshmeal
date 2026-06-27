@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            o.id,\n            o.user_id,\n            o.status as \"status: OrderStatus\",\n            o.total,\n            o.created_at,\n            COALESCE(\n                (SELECT jsonb_agg(item_data)\n                 FROM (\n                    SELECT\n                        oi.id,\n                        oi.product_id,\n                        p.name as product_name,\n                        oi.quantity,\n                        oi.price_at_time\n                    FROM order_items oi\n                    JOIN products p ON oi.product_id = p.id\n                    WHERE oi.order_id = o.id\n                 ) item_data\n                ), '[]'::jsonb\n            ) as \"items!\"\n        FROM orders o\n        JOIN users u ON o.user_id = u.id\n        WHERE u.email = $1\n          AND o.id < $2\n        ORDER BY o.id DESC\n        LIMIT $3\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "status: OrderStatus",
+        "type_info": {
+          "Custom": {
+            "name": "order_status",
+            "kind": {
+              "Enum": [
+                "pending",
+                "paid",
+                "confirmed",
+                "preparing",
+                "delivered",
+                "cancelled"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "total",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "items!",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "9a5d26218be2987cbb08d4f0b4da672f55298f9c0bedb4da2c1c4022bc2f011f"
+}
