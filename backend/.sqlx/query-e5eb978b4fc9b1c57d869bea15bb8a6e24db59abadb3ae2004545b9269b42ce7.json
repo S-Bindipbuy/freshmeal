@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO products (name, description, price, available, image) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+  "query": "SELECT id, name, description, price, category_id, deleted_at, created_at, available, image FROM products WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -15,54 +15,56 @@
       },
       {
         "ordinal": 2,
-        "name": "image",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "price",
         "type_info": "Numeric"
       },
       {
-        "ordinal": 5,
-        "name": "available",
-        "type_info": "Bool"
+        "ordinal": 4,
+        "name": "category_id",
+        "type_info": "Int8"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "deleted_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "available",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "image",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Numeric",
-        "Bool",
-        "Text"
+        "Int8"
       ]
     },
     "nullable": [
       false,
       false,
+      true,
       false,
+      true,
       true,
       false,
       false,
-      true,
       false
     ]
   },
-  "hash": "a2caa063b4e28433ce8aa989b81320ff26a2fe31c6669ff8e41b70d98ee41be0"
+  "hash": "e5eb978b4fc9b1c57d869bea15bb8a6e24db59abadb3ae2004545b9269b42ce7"
 }

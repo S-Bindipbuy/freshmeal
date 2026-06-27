@@ -3,7 +3,7 @@ use actix_multipart::{Multipart, MultipartError};
 use actix_web::dev::Payload;
 use actix_web::web::Data;
 use actix_web::{
-    App, FromRequest, HttpRequest, HttpResponse, HttpServer, ResponseError, error, get, post, web,
+    App, FromRequest, HttpRequest, HttpResponse, HttpServer, ResponseError, error, get, post, put, web,
 };
 use bcrypt::{BcryptError, DEFAULT_COST, hash, verify};
 use chrono::{Duration, NaiveDateTime, Utc};
@@ -158,6 +158,7 @@ pub struct Product {
     pub name: String,
     pub description: Option<String>,
     pub price: Decimal,
+    pub category_id: Option<i64>,
     pub deleted_at: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
     pub available: bool,
@@ -341,10 +342,11 @@ async fn insert_product(
     }
 
     let mut name = String::new();
-    let mut desc = String::new();
+    let mut desc: Option<String> = None;
     let mut price = Decimal::ZERO;
     let mut avail = false;
     let mut img = String::new();
+    let mut category_id: Option<i64> = None;
 
     while let Some(item) = payload.next().await {
         let mut field = item?;
@@ -361,8 +363,10 @@ async fn insert_product(
             }
             Some("description") => {
                 if let Some(chunk) = field.next().await {
-                    desc = String::from_utf8(chunk?.to_vec())
-                        .map_err(|_| AppError::BadRequest("Invalid description UTF-8".into()))?;
+                    desc = Some(
+                        String::from_utf8(chunk?.to_vec())
+                            .map_err(|_| AppError::BadRequest("Invalid description UTF-8".into()))?,
+                    );
                 }
             }
             Some("price") => {
@@ -378,6 +382,19 @@ async fn insert_product(
                     avail = String::from_utf8(chunk?.to_vec())
                         .map_err(|_| AppError::BadRequest("Invalid availability UTF-8".into()))?
                         == "true";
+                }
+            }
+            Some("category_id") => {
+                if let Some(chunk) = field.next().await {
+                    let value = String::from_utf8(chunk?.to_vec())
+                        .map_err(|_| AppError::BadRequest("Invalid category_id UTF-8".into()))?;
+                    category_id = if value.trim().is_empty() {
+                        None
+                    } else {
+                        Some(value.parse().map_err(|_| {
+                            AppError::BadRequest("Invalid category_id format".into())
+                        })?)
+                    };
                 }
             }
             Some("image") => {
@@ -401,11 +418,125 @@ async fn insert_product(
     }
     let res = sqlx::query_as!(
         Product,
-        "INSERT INTO products (name, description, price, available, image) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-        name, desc, price, avail, img
+        "INSERT INTO products (name, description, price, available, image, category_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+        name, desc, price, avail, img, category_id
     ).fetch_one(&config.db_pool).await?;
 
     Ok(HttpResponse::Created().json(res))
+}
+
+#[put("/products/{id}")]
+async fn update_product(
+    claims: Claims,
+    config: Data<AppConfiguration>,
+    path: web::Path<i64>,
+    mut payload: Multipart,
+) -> Result<HttpResponse, AppError> {
+    if claims.role != "admin" {
+        return Err(AppError::Forbidden("Admin access required".into()));
+    }
+
+    let product_id = path.into_inner();
+    let existing = sqlx::query_as!(
+        Product,
+        "SELECT id, name, description, price, category_id, deleted_at, created_at, available, image FROM products WHERE id = $1",
+        product_id
+    )
+    .fetch_optional(&config.db_pool)
+    .await?
+    .ok_or_else(|| AppError::BadRequest("Product not found".into()))?;
+
+    let mut name = existing.name;
+    let mut desc = existing.description;
+    let mut price = existing.price;
+    let mut avail = existing.available;
+    let mut img = existing.image;
+    let mut category_id = existing.category_id;
+
+    while let Some(item) = payload.next().await {
+        let mut field = item?;
+        let cd = field
+            .content_disposition()
+            .and_then(|c| c.get_name().map(|s| s.to_string()));
+
+        match cd.as_deref() {
+            Some("name") => {
+                if let Some(chunk) = field.next().await {
+                    name = String::from_utf8(chunk?.to_vec())
+                        .map_err(|_| AppError::BadRequest("Invalid name UTF-8".into()))?;
+                }
+            }
+            Some("description") => {
+                if let Some(chunk) = field.next().await {
+                    desc = Some(
+                        String::from_utf8(chunk?.to_vec())
+                            .map_err(|_| AppError::BadRequest("Invalid description UTF-8".into()))?,
+                    );
+                }
+            }
+            Some("price") => {
+                if let Some(chunk) = field.next().await {
+                    price = String::from_utf8(chunk?.to_vec())
+                        .map_err(|_| AppError::BadRequest("Invalid price UTF-8".into()))?
+                        .parse()
+                        .map_err(|_| AppError::BadRequest("Invalid price format".into()))?;
+                }
+            }
+            Some("available") => {
+                if let Some(chunk) = field.next().await {
+                    avail = String::from_utf8(chunk?.to_vec())
+                        .map_err(|_| AppError::BadRequest("Invalid availability UTF-8".into()))?
+                        == "true";
+                }
+            }
+            Some("category_id") => {
+                if let Some(chunk) = field.next().await {
+                    let value = String::from_utf8(chunk?.to_vec())
+                        .map_err(|_| AppError::BadRequest("Invalid category_id UTF-8".into()))?;
+                    category_id = if value.trim().is_empty() {
+                        None
+                    } else {
+                        Some(value.parse().map_err(|_| {
+                            AppError::BadRequest("Invalid category_id format".into())
+                        })?)
+                    };
+                }
+            }
+            Some("image") => {
+                let file_extension = field
+                    .content_disposition()
+                    .and_then(|c| c.get_filename_ext().map(|s| s.to_string()))
+                    .unwrap_or("jpg".to_string());
+                let _ = fs::create_dir_all("uploads/").await;
+                let file_name = Uuid::new_v4();
+                let path = format!("uploads/{}.{}", file_name, file_extension);
+                let mut f = File::create(&path).await?;
+
+                while let Some(chunk) = field.next().await {
+                    f.write_all(&chunk?).await?;
+                }
+
+                img = format!("{}.{}", file_name, file_extension);
+            }
+            _ => {}
+        }
+    }
+
+    let res = sqlx::query_as!(
+        Product,
+        "UPDATE products SET name = $1, description = $2, price = $3, available = $4, image = $5, category_id = $6 WHERE id = $7 RETURNING id, name, description, price, category_id, deleted_at, created_at, available, image",
+        name,
+        desc,
+        price,
+        avail,
+        img,
+        category_id,
+        product_id
+    )
+    .fetch_one(&config.db_pool)
+    .await?;
+
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[get("/products")]
@@ -725,6 +856,7 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/images", "./uploads"))
             .service(list_products)
             .service(insert_product)
+            .service(update_product)
             .service(register)
             .service(login)
             .service(create_orders)

@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS order_status;
 
@@ -29,12 +30,20 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE categories (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE products (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name TEXT NOT NULL,
     image TEXT NOT NULL,
     description TEXT,
     price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+    category_id BIGINT NULL REFERENCES categories(id) ON DELETE SET NULL,
     available BOOLEAN NOT NULL DEFAULT TRUE,
     deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -60,6 +69,7 @@ CREATE TABLE order_items (
 -- indexes
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_products_available_partial ON products(id) WHERE available = TRUE;
+CREATE INDEX idx_products_category_id ON products(category_id);
 CREATE INDEX idx_orders_user_id_created_at ON orders(user_id, created_at DESC);
 CREATE INDEX idx_orders_user_status ON orders(user_id, status);
 CREATE INDEX idx_orders_status ON orders(status);
