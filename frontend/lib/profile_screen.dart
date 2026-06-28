@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/database_service.dart';
+import 'package:frontend/login_screen.dart';
+import 'package:frontend/dashboard_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -26,6 +28,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
+    if (DatabaseService.token == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     try {
       final profile = await DatabaseService.getProfile();
       setState(() {
@@ -34,11 +40,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       log("Error loading profile: $e");
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _profile = null;
+      });
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Failed to load profile: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to load profile: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -96,7 +108,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: _isLoading && _profile == null
+        child: DatabaseService.token == null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.account_circle, size: 80, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text("You're not signed in", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: "Poetsen")),
+                      const SizedBox(height: 8),
+                      Text("Sign in to place orders and track history", style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6))),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text("Sign In", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : _isLoading && _profile == null
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _loadProfile,
@@ -129,9 +174,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: theme.colorScheme.primary,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.camera_alt,
-                                color: Colors.white,
+                                color: theme.colorScheme.onPrimary,
                                 size: 20,
                               ),
                             ),
@@ -149,9 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Text(
                         _profile?.email ?? "superadmin@freshmeal.com",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey,
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -168,9 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ? ThemeMode.light
                               : ThemeMode.dark;
                         },
-                        iconColor: isDark
-                            ? Colors.orangeAccent
-                            : Colors.black87,
+                        iconColor: theme.colorScheme.onSurface,
                         theme: theme,
                       ),
                       _buildProfileItem(
@@ -192,9 +235,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: Icons.logout,
                         title: "Logout",
                         onTap: () {
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
+                          DatabaseService.logout();
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                            (_) => false,
+                          );
                         },
                         theme: theme,
                         isLast: true,
@@ -216,20 +261,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Color? iconColor,
     bool isLast = false,
   }) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
+      color: theme.colorScheme.surface,
+      shadowColor: Colors.black.withValues(alpha: 0.05),
       child: ListTile(
         leading: Icon(icon, color: iconColor ?? theme.colorScheme.primary),
         title: Text(
@@ -238,7 +278,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         trailing: const Icon(Icons.chevron_right, size: 20),
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
     );
   }

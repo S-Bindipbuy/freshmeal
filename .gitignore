@@ -1,0 +1,8 @@
+# Rust
+backend/target/
+
+# Flutter
+frontend/build/
+frontend/.dart_tool/
+frontend/.packages
+frontend/.pub/

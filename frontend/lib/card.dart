@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'cart_service.dart';
 import 'database_service.dart';
 import 'product_detail_screen.dart';
 
@@ -14,7 +15,6 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String effectiveTag = heroTag ?? 'product_${product.id}';
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Material(
       color: Colors.transparent,
@@ -36,7 +36,7 @@ class ProductCard extends StatelessWidget {
             border: Border.all(color: theme.dividerColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black45 : Colors.black.withOpacity(0.05),
+                color: theme.shadowColor.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -56,21 +56,17 @@ class ProductCard extends StatelessWidget {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Shimmer.fromColors(
-                        baseColor: isDark
-                            ? Colors.grey[800]!
-                            : Colors.grey[300]!,
-                        highlightColor: isDark
-                            ? Colors.grey[700]!
-                            : Colors.grey[100]!,
-                        child: Container(color: Colors.white),
+                        baseColor: theme.colorScheme.surfaceContainerHighest,
+                        highlightColor: theme.colorScheme.surface,
+                        child: Container(color: theme.colorScheme.surface),
                       ),
                       errorWidget: (context, url, error) => Container(
                         color: theme.colorScheme.surface,
-                        child: const Center(
+                        child: Center(
                           child: Icon(
                             Icons.broken_image,
                             size: 30,
-                            color: Colors.grey,
+                            color: theme.colorScheme.outline,
                           ),
                         ),
                       ),
@@ -112,16 +108,39 @@ class ProductCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
-                            onTap: () {},
+                            onTap: () {
+                              if (DatabaseService.token == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please log in first to add items"),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+                              CartService.instance.addItem(
+                                product.id,
+                                product.title,
+                                product.price,
+                                1,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("${product.title} added to cart!"),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add,
-                                color: Colors.white,
+                                color: theme.colorScheme.onPrimary,
                                 size: 18,
                               ),
                             ),
@@ -146,11 +165,10 @@ class ProductCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey[900]! : Colors.grey[300]!,
-      highlightColor: isDark ? Colors.grey[800]! : Colors.grey[100]!,
+      baseColor: theme.colorScheme.surfaceContainerHighest,
+      highlightColor: theme.colorScheme.surface,
       child: Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
@@ -159,23 +177,23 @@ class ProductCardSkeleton extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Expanded(child: Container(color: Colors.white)),
+            Expanded(child: Container(color: theme.colorScheme.surface)),
             Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 12, width: 80, color: Colors.white),
+                  Container(height: 12, width: 80, color: theme.colorScheme.surface),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(height: 12, width: 40, color: Colors.white),
+                      Container(height: 12, width: 40, color: theme.colorScheme.surface),
                       Container(
                         width: 24,
                         height: 24,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -208,7 +226,6 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.all(12.0),
@@ -216,9 +233,9 @@ class OrderCard extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: theme.dividerColor, width: 1),
-        boxShadow: [
+           boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black45 : Colors.black.withOpacity(0.03),
+            color: theme.shadowColor.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -241,14 +258,12 @@ class OrderCard extends StatelessWidget {
                 imageUrl: product.image,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Shimmer.fromColors(
-                  baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-                  highlightColor: isDark
-                      ? Colors.grey[700]!
-                      : Colors.grey[100]!,
-                  child: Container(color: Colors.white),
+                  baseColor: theme.colorScheme.surfaceContainerHighest,
+                  highlightColor: theme.colorScheme.surface,
+                  child: Container(color: theme.colorScheme.surface),
                 ),
-                errorWidget: (context, url, error) => const Center(
-                  child: Icon(Icons.broken_image, color: Colors.grey),
+                errorWidget: (context, url, error) => Center(
+                  child: Icon(Icons.broken_image, color: theme.colorScheme.outline),
                 ),
               ),
             ),
@@ -279,9 +294,9 @@ class OrderCard extends StatelessWidget {
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.delete_outline,
-                        color: Colors.redAccent,
+                        color: theme.colorScheme.error,
                         size: 20,
                       ),
                       onPressed: onDelete,
@@ -294,9 +309,7 @@ class OrderCard extends StatelessWidget {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey[900]
-                            : theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -355,7 +368,7 @@ class OrderCard extends StatelessWidget {
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
-        color: Colors.white,
+        color: theme.colorScheme.onPrimary,
         icon: Icon(icon, size: 14),
         onPressed: onPressed,
       ),
@@ -369,11 +382,10 @@ class OrderCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey[900]! : Colors.grey[300]!,
-      highlightColor: isDark ? Colors.grey[800]! : Colors.grey[100]!,
+      baseColor: theme.colorScheme.surfaceContainerHighest,
+      highlightColor: theme.colorScheme.surface,
       child: Container(
         height: 100,
         padding: const EdgeInsets.all(12.0),
@@ -388,9 +400,9 @@ class OrderCardSkeleton extends StatelessWidget {
               width: 76,
               height: 76,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(15),
+                ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -398,9 +410,9 @@ class OrderCardSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(height: 14, width: 140, color: Colors.white),
+                  Container(height: 14, width: 140, color: theme.colorScheme.surface),
                   const SizedBox(height: 12),
-                  Container(height: 24, width: 70, color: Colors.white),
+                  Container(height: 24, width: 70, color: theme.colorScheme.surface),
                 ],
               ),
             ),

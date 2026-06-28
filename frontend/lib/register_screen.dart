@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/dashboard_screen.dart';
 import 'package:frontend/login_screen.dart';
 import 'package:frontend/database_service.dart';
 
@@ -36,10 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Registration successful!")),
         );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -94,18 +90,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: true,
-                        onChanged: (bool? value) {},
-                      ),
-                      const Text("Remember Password"),
-                    ],
+                children: [
+                  Checkbox(
+                    value: true,
+                    onChanged: (bool? value) {},
                   ),
-                  const Text("Forgot Password"),
+                  const Text("Remember Password"),
                 ],
               ),
               const SizedBox(height: 20),
@@ -114,11 +104,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleRegister,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                             strokeWidth: 2,
                           ),
                         )

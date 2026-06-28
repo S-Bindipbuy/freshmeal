@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS order_status;
+DROP TYPE IF EXISTS role;
 
 CREATE TYPE order_status AS ENUM (
     'pending',
@@ -80,10 +81,10 @@ CREATE INDEX idx_order_items_product_id ON order_items(product_id);
 DROP VIEW IF EXISTS monthly_revenue;
 CREATE VIEW monthly_revenue AS
 SELECT
-    EXTRACT(YEAR  FROM created_at)::INT AS year,
-    EXTRACT(MONTH FROM created_at)::INT AS month,
+    EXTRACT(YEAR  FROM created_at)::INT  AS year,
+    EXTRACT(MONTH FROM created_at)::INT  AS month,
     COUNT(*)                             AS order_count,
-    COALESCE(SUM(total), 0)             AS revenue
+    COALESCE(SUM(total), 0)              AS revenue
 FROM orders
 WHERE status IN ('paid', 'delivered')
 GROUP BY year, month
@@ -93,7 +94,7 @@ DROP VIEW IF EXISTS yearly_revenue;
 CREATE VIEW yearly_revenue AS
 SELECT
     EXTRACT(YEAR FROM created_at)::INT AS year,
-    COUNT(*)                            AS order_count,
+    COUNT(*)                           AS order_count,
     COALESCE(SUM(total), 0)            AS revenue
 FROM orders
 WHERE status IN ('paid', 'delivered')

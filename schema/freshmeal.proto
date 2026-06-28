@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package freshmeal;
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  PAID = 2;
+  CONFIRMED = 3;
+  PREPARING = 4;
+  DELIVERED = 5;
+  CANCELLED = 6;
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ADMIN = 1;
+  CUSTOMER = 2;
+  RESTAURANT = 3;
+}
+
+message User {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+  string password_hash = 4;
+  Role role = 5;
+  optional string avatar = 6;
+}
+
+message Product {
+  int64 id = 1;
+  string name = 2;
+  optional string description = 3;
+  string price = 4;
+  optional int64 category_id = 5;
+  optional string deleted_at = 6;
+  string created_at = 7;
+  bool available = 8;
+  string image = 9;
+}
+
+message Order {
+  int64 id = 1;
+  int64 user_id = 2;
+  OrderStatus status = 3;
+  string total = 4;
+  string created_at = 5;
+  optional int64 branch_id = 6;
+}
+
+message OrderItem {
+  int64 id = 1;
+  int64 product_id = 2;
+  string product_name = 3;
+  int32 quantity = 4;
+  string price_at_time = 5;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string name = 2;
+  string password = 3;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 1;
+  int64 id = 2;
+  string name = 3;
+}
+
+message OrderRequest {
+  int64 product_id = 1;
+  int32 quantity = 2;
+}
+
+message OrderPagination {
+  optional int64 last_id = 1;
+  optional int64 limit = 2;
+}
+
+message ProfileResponse {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+  Role role = 4;
+  optional string avatar = 5;
+}
+
+message CustomerResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string created_at = 4;
+}
+
+message MonthlyRevenue {
+  int32 year = 1;
+  int32 month = 2;
+  int64 order_count = 3;
+  string revenue = 4;
+}
+
+message YearlyRevenue {
+  int32 year = 1;
+  int64 order_count = 2;
+  string revenue = 3;
+}
+
+message OrderHistoryItem {
+  int64 id = 1;
+  int64 user_id = 2;
+  OrderStatus status = 3;
+  string total = 4;
+  string created_at = 5;
+  repeated OrderItem items = 6;
+  optional int64 branch_id = 7;
+  string user_name = 8;
+}
+
+message ProductList {
+  repeated Product products = 1;
+}
+
+message OrderHistoryList {
+  repeated OrderHistoryItem orders = 1;
+}
+
+message CustomerList {
+  repeated CustomerResponse customers = 1;
+}
+
+message MonthlyRevenueList {
+  repeated MonthlyRevenue revenues = 1;
+}
+
+message YearlyRevenueList {
+  repeated YearlyRevenue revenues = 1;
+}
+
+message AvatarResponse {
+  string avatar = 1;
+}
+
+message OrderRequestList {
+  repeated OrderRequest requests = 1;
+  optional int64 branch_id = 2;
+}
+
+message Category {
+  int64 id = 1;
+  string name = 2;
+  optional string description = 3;
+  string created_at = 4;
+}
+
+message CategoryList {
+  repeated Category categories = 1;
+}
+
+message Branch {
+  int64 id = 1;
+  string name = 2;
+  string address = 3;
+  double lat = 4;
+  double lng = 5;
+  string created_at = 6;
+}
+
+message BranchList {
+  repeated Branch branches = 1;
+}
+
+message Empty {}

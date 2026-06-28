@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/dashboard_screen.dart';
 import 'package:frontend/register_screen.dart';
 import 'package:frontend/database_service.dart';
 
@@ -30,10 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -44,6 +40,49 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Reset Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter your email to receive a reset link."),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                hintText: "your@email.com",
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (emailController.text.isNotEmpty) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Reset link sent to ${emailController.text}"),
+                  ),
+                );
+              }
+            },
+            child: const Text("Send"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -82,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
-                    // mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
                         height: 24,
@@ -97,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () => _showForgotPasswordDialog(context),
                     child: Text(
                       "Forgot Password",
                       style: TextStyle(
@@ -114,11 +152,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                             strokeWidth: 2,
                           ),
                         )
@@ -131,13 +169,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text("If you don't have account"),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final registered = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const RegisterScreen(),
                         ),
                       );
+                      if (registered == true && context.mounted) {
+                        Navigator.pop(context, true);
+                      }
                     },
                     child: const Text("Register"),
                   ),

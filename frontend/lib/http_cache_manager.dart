@@ -3,10 +3,12 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:frontend/database_service.dart';
 import 'package:http/http.dart' as http;
 
-/// A custom [FileService] that fetches files (images) using the shared [http.Client].
 class HttpFileService extends FileService {
   @override
-  Future<FileServiceResponse> get(String url, {Map<String, String>? headers}) async {
+  Future<FileServiceResponse> get(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
     final request = http.Request('GET', Uri.parse(url));
     if (headers != null) {
       request.headers.addAll(headers);
@@ -16,7 +18,6 @@ class HttpFileService extends FileService {
   }
 }
 
-/// A [FileServiceResponse] wrapper around [http.StreamedResponse].
 class HttpFileServiceResponse implements FileServiceResponse {
   final http.StreamedResponse _response;
   final DateTime _receivedTime = DateTime.now();
