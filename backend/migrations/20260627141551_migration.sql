@@ -1,8 +1,10 @@
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS order_status;
+DROP TYPE IF EXISTS role;
 
 CREATE TYPE order_status AS ENUM (
     'pending',
@@ -25,7 +27,15 @@ CREATE TABLE users (
     name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role role NOT NULL DEFAULT 'customer',
-    avatar TEXT NULL
+    avatar TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE categories (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE products (
@@ -34,6 +44,7 @@ CREATE TABLE products (
     image TEXT NOT NULL,
     description TEXT,
     price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+    category_id BIGINT NULL REFERENCES categories(id) ON DELETE SET NULL,
     available BOOLEAN NOT NULL DEFAULT TRUE,
     deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -59,6 +70,7 @@ CREATE TABLE order_items (
 -- indexes
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_products_available_partial ON products(id) WHERE available = TRUE;
+CREATE INDEX idx_products_category_id ON products(category_id);
 CREATE INDEX idx_orders_user_id_created_at ON orders(user_id, created_at DESC);
 CREATE INDEX idx_orders_user_status ON orders(user_id, status);
 CREATE INDEX idx_orders_status ON orders(status);
@@ -69,10 +81,10 @@ CREATE INDEX idx_order_items_product_id ON order_items(product_id);
 DROP VIEW IF EXISTS monthly_revenue;
 CREATE VIEW monthly_revenue AS
 SELECT
-    EXTRACT(YEAR  FROM created_at)::INT AS year,
-    EXTRACT(MONTH FROM created_at)::INT AS month,
+    EXTRACT(YEAR  FROM created_at)::INT  AS year,
+    EXTRACT(MONTH FROM created_at)::INT  AS month,
     COUNT(*)                             AS order_count,
-    COALESCE(SUM(total), 0)             AS revenue
+    COALESCE(SUM(total), 0)              AS revenue
 FROM orders
 WHERE status IN ('paid', 'delivered')
 GROUP BY year, month
@@ -82,9 +94,14 @@ DROP VIEW IF EXISTS yearly_revenue;
 CREATE VIEW yearly_revenue AS
 SELECT
     EXTRACT(YEAR FROM created_at)::INT AS year,
-    COUNT(*)                            AS order_count,
+    COUNT(*)                           AS order_count,
     COALESCE(SUM(total), 0)            AS revenue
 FROM orders
 WHERE status IN ('paid', 'delivered')
 GROUP BY year
 ORDER BY year DESC;
+
+-- Default admin user (password: admin123)
+INSERT INTO users (email, name, password_hash, role) 
+VALUES ('admin@freshmeal.com', 'Admin', '$2a$12$/iS0sL7dKiBJL/fhCdErzeZ6oJ3FRbNFG2BBrnEtreTsdHIquQQQ2', 'admin')
+ON CONFLICT (email) DO NOTHING;

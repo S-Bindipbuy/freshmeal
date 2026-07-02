@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'cart_service.dart';
 import 'database_service.dart';
 import 'order_screen.dart';
-import 'rhttp_cache_manager.dart';
+import 'login_screen.dart';
+import 'http_cache_manager.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -20,13 +22,11 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int quantity = 1;
-  String selectedSize = "M";
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Stack(
@@ -39,11 +39,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Hero(
               tag: widget.heroTag,
               child: CachedNetworkImage(
-                cacheManager: RhttpCacheManager.instance,
+                cacheManager: HttpCacheManager.instance,
                 imageUrl: widget.product.image,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: isDark ? Colors.grey[800] : Colors.grey[200],
+                  color: theme.colorScheme.surfaceContainerHighest,
                 ),
                 errorWidget: (context, url, error) =>
                     const Icon(Icons.broken_image),
@@ -66,9 +66,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: isDark ? Colors.black45 : Colors.black12,
-                          blurRadius: 20,
-                          offset: const Offset(0, -5),
+                      color: theme.shadowColor.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, -5),
                         ),
                       ],
                     ),
@@ -83,40 +83,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Title & Price Row
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          widget.product.title,
-                                          style: TextStyle(
-                                            fontSize: 32,
-                                            fontFamily: "Poetsen",
-                                            color: theme
-                                                .textTheme
-                                                .displayLarge
-                                                ?.color,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          "Special Fresh Meal",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: theme
-                                                .textTheme
-                                                .bodySmall
-                                                ?.color
-                                                ?.withOpacity(0.6),
-                                            fontFamily: "Poetsen",
-                                          ),
-                                        ),
-                                      ],
+                                    child: Text(
+                                      widget.product.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontFamily: "Poetsen",
+                                        color: theme
+                                            .textTheme.displayLarge?.color,
+                                      ),
                                     ),
                                   ),
                                   Text(
@@ -132,87 +112,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                               const SizedBox(height: 25),
 
-                              // Info Row: Rating, Calories, Time
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildInfoItem(
-                                    Icons.star,
-                                    "4.8",
-                                    "Rating",
-                                    theme,
-                                  ),
-                                  _buildInfoItem(
-                                    Icons.local_fire_department,
-                                    "150 kcal",
-                                    "Calories",
-                                    theme,
-                                  ),
-                                  _buildInfoItem(
-                                    Icons.access_time_filled,
-                                    "20-30 min",
-                                    "Delivery",
-                                    theme,
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 30),
-
-                              // Size Selection
-                              const Text(
-                                "Select Size",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontFamily: "Poetsen",
-                                  fontWeight: FontWeight.bold,
+                              if (widget.product.description.isNotEmpty)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "About",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontFamily: "Poetsen",
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      widget.product.description,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                        height: 1.6,
+                                        fontFamily: "Poetsen",
+                                      ),
+                                    ),
+                                    const SizedBox(height: 30),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 15),
-                              Row(
-                                children: ["S", "M", "L"].map((sizeLabel) {
-                                  final isSelected = selectedSize == sizeLabel;
-                                  return GestureDetector(
-                                    onTap: () => setState(
-                                      () => selectedSize = sizeLabel,
-                                    ),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 15),
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.surface,
-                                        borderRadius: BorderRadius.circular(15),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? Colors.transparent
-                                              : theme.dividerColor,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          sizeLabel,
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: isSelected
-                                                ? Colors.white
-                                                : theme
-                                                      .textTheme
-                                                      .bodyLarge
-                                                      ?.color,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-
-                              const SizedBox(height: 30),
 
                               // Quantity Selector
                               const Text(
@@ -227,8 +151,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Row(
                                 children: [
                                   _buildQtyBtn(Icons.remove, () {
-                                    if (quantity > 1)
+                                    if (quantity > 1) {
                                       setState(() => quantity--);
+                                    }
                                   }, theme),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -248,32 +173,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 ],
                               ),
 
-                              const SizedBox(height: 30),
-
-                              // Description
-                              const Text(
-                                "About Product",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontFamily: "Poetsen",
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 15),
-                              Text(
-                                widget.product.description.isEmpty
-                                    ? "This premium ${widget.product.title} is prepared with love and the best organic ingredients. Perfectly balanced taste for your healthy lifestyle."
-                                    : widget.product.description,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: theme.textTheme.bodyMedium?.color
-                                      ?.withOpacity(0.7),
-                                  height: 1.6,
-                                  fontFamily: "Poetsen",
-                                ),
-                              ),
-
-                              const SizedBox(height: 120), // Bottom padding
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
@@ -285,7 +185,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
 
-          // 3. Floating Back Button - Placed last to stay on top
+          // Floating back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 20,
@@ -301,7 +201,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
 
-          // Cart Button
+          // Shopping bag button
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             right: 20,
@@ -326,6 +226,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
           ),
+
         ],
       ),
       bottomNavigationBar: Container(
@@ -335,7 +236,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           boxShadow: [
             BoxShadow(
-              color: isDark ? Colors.black45 : Colors.black12,
+              color: theme.shadowColor.withValues(alpha: 0.1),
               blurRadius: 10,
             ),
           ],
@@ -343,7 +244,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: SafeArea(
           child: Row(
             children: [
-              // Total Price
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +251,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Text(
                     "Total Price",
                     style: TextStyle(
-                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                      color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                     ),
                   ),
                   Text(
@@ -365,40 +265,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
               const SizedBox(width: 30),
-              // Add to Cart Button
               Expanded(
                 child: SizedBox(
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () async {
-                      try {
-                        await DatabaseService.placeOrder(
-                          widget.product.id,
-                          quantity,
+                      if (DatabaseService.token == null) {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
                         );
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "$quantity x ${widget.product.title} added to cart!",
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 1),
-                              backgroundColor: theme.colorScheme.primary,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Failed to add to cart: $e"),
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                        }
+                        if (DatabaseService.token == null) return;
                       }
+                      CartService.instance.addItem(
+                        widget.product.id,
+                        widget.product.title,
+                        widget.product.price,
+                        quantity,
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "$quantity x ${widget.product.title} added to cart!",
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 1),
+                          backgroundColor: theme.colorScheme.primary,
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
@@ -429,35 +324,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
         child: Icon(icon, size: 20, color: theme.textTheme.bodyLarge?.color),
       ),
-    );
-  }
-
-  Widget _buildInfoItem(
-    IconData icon,
-    String value,
-    String label,
-    ThemeData theme,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: theme.colorScheme.primary, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-          ),
-        ),
-      ],
     );
   }
 }

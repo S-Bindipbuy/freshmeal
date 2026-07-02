@@ -12,3 +12,5 @@ run = "cargo run --release"
 
 [env]
 SQLX_OFFLINE=true
+DATABASE_URL="postgres://freshmeal_user:123@localhost/freshmeal"
+JWT_SECRET="freshmeal_secret"

@@ -12,10 +12,15 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  rhttp: ^0.18.0
   shimmer: ^3.0.0
   cached_network_image: ^3.3.1
   file_picker: ^11.0.2
+  http: ^1.6.0
+  flutter_cache_manager: ^3.4.1
+  protobuf: ^6.0.0
+  fixnum: ^1.1.0
+  flutter_map: ^8.1.0
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

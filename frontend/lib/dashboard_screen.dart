@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/home_screen.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/notification_screen.dart';
 import 'package:frontend/profile_screen.dart';
 import 'package:frontend/shop_screen.dart';
 import 'package:frontend/order_screen.dart';
+import 'package:frontend/database_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,6 +19,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    DatabaseService.authNotifier.addListener(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    DatabaseService.authNotifier.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onTabClick(int index) {
@@ -39,13 +50,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         label: "Shop",
       ),
       BottomNavigationBarItem(
-        icon: Icon(Icons.notifications),
-        label: "Notification",
+        icon: Icon(Icons.receipt_long),
+        label: "Orders",
       ),
       BottomNavigationBarItem(
         icon: Icon(Icons.account_circle_rounded),
         label: "Profile",
-      )
+      ),
     ];
 
     final theme = Theme.of(context);
@@ -53,9 +64,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final bottomNavBar = BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
-      backgroundColor: isDark ? Colors.black : theme.colorScheme.primary,
-      selectedItemColor: isDark ? Colors.white : Colors.white,
-      unselectedItemColor: isDark ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.7),
+      backgroundColor: theme.colorScheme.surface,
+      selectedItemColor: theme.colorScheme.primary,
+      unselectedItemColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
       showSelectedLabels: true,
       showUnselectedLabels: true,
       selectedLabelStyle: const TextStyle(
@@ -77,7 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: _indexSelectedItems == 0
           ? AppBar(
               title: Text(
-                "Hi, SuperAdmin",
+                "FreshMeal",
                 style: TextStyle(
                   fontSize: 24,
                   color: theme.colorScheme.primary,
@@ -88,29 +99,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               actions: [
                 IconButton(
                   onPressed: () {
-                    themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                    themeNotifier.value =
+                        isDark ? ThemeMode.light : ThemeMode.dark;
                   },
                   icon: Icon(
                     isDark ? Icons.light_mode : Icons.dark_mode,
-                    color: isDark ? Colors.orangeAccent : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
-                ),
-                IconButton(
-                  iconSize: 24.0,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const OrderScreen()),
-                    );
-                  },
-                  icon: Icon(Icons.shopping_bag_outlined,
-                      color: theme.colorScheme.primary),
-                ),
-                IconButton(
-                  padding: const EdgeInsets.only(right: 20.0),
-                  icon: Image.asset('assets/profile.png',
-                      width: 24.0, height: 24.0),
-                  onPressed: () {},
                 ),
               ],
             )
@@ -118,10 +113,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: IndexedStack(
         index: _indexSelectedItems,
         children: [
-          HomeScreen(isSelected: _indexSelectedItems == 0),
-          ShopScreen(isSelected: _indexSelectedItems == 1),
-          const NotificationScreen(),
-          const ProfileScreen(),
+          HomeScreen(
+            isSelected: true,
+            onNavigateToShop: () => _onTabClick(1),
+            onNavigateToProfile: () => _onTabClick(3),
+          ),
+          const ShopScreen(),
+          OrderScreen(key: ValueKey(DatabaseService.token)),
+          ProfileScreen(key: ValueKey(DatabaseService.token)),
         ],
       ),
       bottomNavigationBar: bottomNavBar,
