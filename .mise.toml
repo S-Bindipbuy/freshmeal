@@ -5,3 +5,6 @@ config_roots = [
   "backend",
   "frontend",
 ]
+
+[tools]
+protoc = "latest"

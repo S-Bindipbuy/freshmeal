@@ -12,8 +12,6 @@ use crate::models::*;
 use crate::proto;
 use crate::utils::*;
 
-// ── Auth ──
-
 #[post("/register")]
 pub async fn register(
     config: Data<AppConfiguration>,
@@ -69,8 +67,6 @@ pub async fn login(
 
     Err(AppError::Unauthorized("Invalid credentials".into()))
 }
-
-// ── Products ──
 
 #[post("/products")]
 pub async fn insert_product(
@@ -919,8 +915,6 @@ pub async fn delete_category(
     Ok(encode_proto(&proto::Empty {}))
 }
 
-// ── Branches ──
-
 #[get("/branches")]
 pub async fn list_branches(config: Data<AppConfiguration>) -> Result<HttpResponse, AppError> {
     let list = sqlx::query_as::<_, DbBranch>(
@@ -1043,8 +1037,6 @@ pub async fn delete_branch(
 
     Ok(encode_proto(&proto::Empty {}))
 }
-
-// ── Admin: Products ──
 
 #[patch("/products/{id}/availability")]
 pub async fn toggle_product_availability(

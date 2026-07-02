@@ -28,8 +28,9 @@ class Product {
   });
 
   factory Product.fromProto($pb.Product p, String baseUrl) {
-    String imageName =
-        p.image.contains('/') ? p.image.split('/').last : p.image;
+    String imageName = p.image.contains('/')
+        ? p.image.split('/').last
+        : p.image;
     String normalizedBaseUrl = baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
@@ -90,8 +91,6 @@ class DatabaseService {
     return headers;
   }
 
-  // ── Products ──
-
   static Future<List<Product>> getProducts({
     String? search,
     int? categoryId,
@@ -100,14 +99,16 @@ class DatabaseService {
       final params = <String, String>{};
       if (search != null && search.isNotEmpty) params['search'] = search;
       if (categoryId != null) params['category_id'] = categoryId.toString();
-      final uri = Uri.parse('$_normalizedBaseUrl/products')
-          .replace(queryParameters: params.isNotEmpty ? params : null);
+      final uri = Uri.parse(
+        '$_normalizedBaseUrl/products',
+      ).replace(queryParameters: params.isNotEmpty ? params : null);
       final response = await client
           .get(uri, headers: _headers())
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
-        final productList =
-            $pb.ProductList.fromBuffer(response.bodyBytes.toList());
+        final productList = $pb.ProductList.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return productList.products
             .map((p) => Product.fromProto(p, _normalizedBaseUrl))
             .toList();
@@ -164,20 +165,20 @@ class DatabaseService {
     }
   }
 
-  // ── Categories ──
-
   static Future<List<Category>> getCategories({String? search}) async {
     try {
       final params = <String, String>{};
       if (search != null && search.isNotEmpty) params['search'] = search;
-      final uri = Uri.parse('$_normalizedBaseUrl/categories')
-          .replace(queryParameters: params.isNotEmpty ? params : null);
+      final uri = Uri.parse(
+        '$_normalizedBaseUrl/categories',
+      ).replace(queryParameters: params.isNotEmpty ? params : null);
       final response = await client
           .get(uri, headers: _headers(isProto: true))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
-        final categoryList =
-            $pb.CategoryList.fromBuffer(response.bodyBytes.toList());
+        final categoryList = $pb.CategoryList.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return categoryList.categories
             .map((c) => Category.fromProto(c))
             .toList();
@@ -266,8 +267,6 @@ class DatabaseService {
     }
   }
 
-  // ── Orders ──
-
   static Future<List<$pb.OrderHistoryItem>> getOrderHistory() async {
     try {
       final response = await client
@@ -278,8 +277,9 @@ class DatabaseService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final historyList =
-            $pb.OrderHistoryList.fromBuffer(response.bodyBytes.toList());
+        final historyList = $pb.OrderHistoryList.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return historyList.orders.toList();
       } else {
         throw Exception('Server returned ${response.statusCode}');
@@ -292,12 +292,14 @@ class DatabaseService {
 
   static Future<void> placeOrder(String productId, int quantity) async {
     try {
-      final reqList = $pb.OrderRequestList(requests: [
-        $pb.OrderRequest(
-          productId: $fixnum.Int64(int.parse(productId)),
-          quantity: $fixnum.Int64(quantity),
-        ),
-      ]);
+      final reqList = $pb.OrderRequestList(
+        requests: [
+          $pb.OrderRequest(
+            productId: $fixnum.Int64(int.parse(productId)),
+            quantity: quantity,
+          ),
+        ],
+      );
       final response = await client
           .post(
             Uri.parse('$_normalizedBaseUrl/orders'),
@@ -365,9 +367,7 @@ class DatabaseService {
     try {
       final response = await client
           .patch(
-            Uri.parse(
-              '$_normalizedBaseUrl/orders/$orderId/items/$productId',
-            ),
+            Uri.parse('$_normalizedBaseUrl/orders/$orderId/items/$productId'),
             headers: _headers(isProto: false),
             body: '{"quantity":$quantity}',
           )
@@ -384,8 +384,6 @@ class DatabaseService {
     }
   }
 
-  // ── Branches ──
-
   static Future<List<Branch>> getBranches() async {
     try {
       final response = await client
@@ -396,8 +394,9 @@ class DatabaseService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final branchList =
-            $pb.BranchList.fromBuffer(response.bodyBytes.toList());
+        final branchList = $pb.BranchList.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return branchList.branches.map((b) => Branch.fromProto(b)).toList();
       } else {
         throw Exception('Server returned ${response.statusCode}');
@@ -410,11 +409,9 @@ class DatabaseService {
 
   static Future<Branch> getNearestBranch(double lat, double lng) async {
     try {
-      final uri = Uri.parse('$_normalizedBaseUrl/branches/nearest')
-          .replace(queryParameters: {
-        'lat': lat.toString(),
-        'lng': lng.toString(),
-      });
+      final uri = Uri.parse('$_normalizedBaseUrl/branches/nearest').replace(
+        queryParameters: {'lat': lat.toString(), 'lng': lng.toString()},
+      );
       final response = await client
           .get(uri, headers: _headers(isProto: true))
           .timeout(const Duration(seconds: 5));
@@ -432,18 +429,20 @@ class DatabaseService {
     }
   }
 
-  // ── Orders ──
-
   static Future<void> batchPlaceOrder(
     List<Map<String, dynamic>> items, {
     int? branchId,
   }) async {
     try {
       final reqList = $pb.OrderRequestList(
-        requests: items.map((item) => $pb.OrderRequest(
-          productId: $fixnum.Int64(item["product_id"] as int),
-          quantity: $fixnum.Int64(item["quantity"] as int),
-        )).toList(),
+        requests: items
+            .map(
+              (item) => $pb.OrderRequest(
+                productId: $fixnum.Int64(item["product_id"] as int),
+                quantity: item["quantity"] as int,
+              ),
+            )
+            .toList(),
       );
       if (branchId != null) {
         reqList.branchId = $fixnum.Int64(branchId);
@@ -467,8 +466,6 @@ class DatabaseService {
     }
   }
 
-  // ── Auth ──
-
   static Future<void> login(String email, String password) async {
     try {
       final req = $pb.LoginRequest(email: email, password: password);
@@ -481,8 +478,9 @@ class DatabaseService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final loginResp =
-            $pb.LoginResponse.fromBuffer(response.bodyBytes.toList());
+        final loginResp = $pb.LoginResponse.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         _token = loginResp.token;
         authNotifier.value = _token;
       } else {
@@ -502,8 +500,11 @@ class DatabaseService {
     String password,
   ) async {
     try {
-      final req =
-          $pb.RegisterRequest(email: email, name: username, password: password);
+      final req = $pb.RegisterRequest(
+        email: email,
+        name: username,
+        password: password,
+      );
       final response = await client
           .post(
             Uri.parse('$_normalizedBaseUrl/register'),
@@ -513,8 +514,9 @@ class DatabaseService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final loginResp =
-            $pb.LoginResponse.fromBuffer(response.bodyBytes.toList());
+        final loginResp = $pb.LoginResponse.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         _token = loginResp.token;
         authNotifier.value = _token;
       } else {
@@ -543,8 +545,9 @@ class DatabaseService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final profile =
-            $pb.ProfileResponse.fromBuffer(response.bodyBytes.toList());
+        final profile = $pb.ProfileResponse.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return UserProfile.fromProto(profile, _normalizedBaseUrl);
       } else {
         throw Exception(
@@ -560,24 +563,30 @@ class DatabaseService {
   static Future<String> uploadAvatar(Uint8List s, String filename) async {
     try {
       var request = http.MultipartRequest(
-          'POST', Uri.parse('$_normalizedBaseUrl/profile/avatar'));
+        'POST',
+        Uri.parse('$_normalizedBaseUrl/profile/avatar'),
+      );
       if (_token != null) {
         request.headers['Authorization'] = 'Bearer $_token';
       }
-      request.files
-          .add(http.MultipartFile.fromBytes('image', s, filename: filename));
+      request.files.add(
+        http.MultipartFile.fromBytes('image', s, filename: filename),
+      );
 
-      final streamedResponse =
-          await client.send(request).timeout(const Duration(seconds: 15));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        final avatarResp =
-            $pb.AvatarResponse.fromBuffer(response.bodyBytes.toList());
+        final avatarResp = $pb.AvatarResponse.fromBuffer(
+          response.bodyBytes.toList(),
+        );
         return avatarResp.avatar;
       } else {
         throw Exception(
-            'Server returned ${response.statusCode}: ${response.body}');
+          'Server returned ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       log("Error uploading avatar: $e");

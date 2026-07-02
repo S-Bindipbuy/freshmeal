@@ -1,9 +1,9 @@
 CREATE USER freshmeal_user WITH PASSWORD '123';
 
-ALTER USER freshmeal NOCREATEDB;
+ALTER USER freshmeal_user NOCREATEDB;
 
 CREATE DATABASE freshmeal
-    WITH OWNER = freshmeal
+    WITH OWNER = freshmeal_user
     ENCODING = 'UTF8'
     TEMPLATE template0;
 

@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - main
@@ -14,87 +14,36 @@ on:
 permissions:
   contents: write
 
-
 jobs:
-  test-build:
-    name: Test Build
-    if: (!startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-
-
-      - name: Install protoc compiler
-        uses: arduino/setup-protoc@v3
-
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-
-      - name: Rust Cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-
-
-      - name: Generate protobuf files
-        if: runner.os != 'Windows'
-        run: |
-          chmod +x ./generate_proto.sh
-          ./generate_proto.sh
-
-
-      - name: Generate protobuf files (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          ./generate_proto.bat
-
-
-      - name: Check compilation
-        working-directory: backend
-        run: cargo check --verbose
-        env:
-          SQLX_OFFLINE: true
-
-
-
   flutter-android:
     name: Flutter Android APK
-    if: github.ref == 'refs/heads/main'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Setup mise
+        uses: jdx/mise-action@v2
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: stable
-          channel: stable
+      - name: Activate mise shell
+        shell: bash
+        run: |
+          eval "$(mise activate bash)"
+          mise install
 
+      - name: Generate protobuf files
+        run: |
+          chmod +x generate_proto.sh
+          ./generate_proto.sh
 
       - name: Build release APK
         working-directory: frontend
         run: |
+          flutter pub get
           flutter build apk --release \
             --dart-define=API_URL=${{ secrets.API_URL }}
-
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -102,18 +51,14 @@ jobs:
           name: freshmeal-android-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
 
-
-
   create-release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout source code
         uses: actions/checkout@v4
-
 
       - name: Create Release
         id: create_release
@@ -122,85 +67,78 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-
-  upload-assets:
-    name: Build & Upload (${{ matrix.target }})
+  backend-build:
+    name: Build Backend (${{ matrix.target }})
     needs: create-release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
 
-
     strategy:
       fail-fast: false
-
       matrix:
         include:
-
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-
           - target: x86_64-apple-darwin
             os: macos-latest
-
           - target: aarch64-apple-darwin
             os: macos-latest
-
           - target: x86_64-pc-windows-msvc
             os: windows-latest
 
-
     steps:
-
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Setup mise
+        uses: jdx/mise-action@v2
 
-      - name: Install protoc compiler
-        uses: arduino/setup-protoc@v3
+      - name: Activate mise shell
+        shell: bash
+        run: |
+          eval "$(mise activate bash)"
+          mise install
 
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: ${{ matrix.target }}
-
-
-
-      - name: Generate protobuf files
+      - name: Generate protobuf files (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          chmod +x ./generate_proto.sh
+          chmod +x generate_proto.sh
           ./generate_proto.sh
-
 
       - name: Generate protobuf files (Windows)
         if: runner.os == 'Windows'
-        run: |
-          ./generate_proto.bat
-
-
+        shell: pwsh
+        run: ./generate_proto.ps1
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: backend -> target
 
-
-
-      - name: Build and upload binary to release
+      - name: Build and upload backend binary
         uses: taiki-e/upload-rust-binary-action@v1
-
         with:
           bin: backend
           target: ${{ matrix.target }}
           manifest-path: backend/Cargo.toml
           token: ${{ secrets.GITHUB_TOKEN }}
-
         env:
           SQLX_OFFLINE: true
+
+      - name: Download APK artifact
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        uses: actions/download-artifact@v4
+        with:
+          name: freshmeal-android-apk
+          path: apk
+
+      - name: Upload APK to GitHub Release
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

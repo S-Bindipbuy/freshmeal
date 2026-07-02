@@ -92,8 +92,6 @@ impl From<DbBranch> for proto::Branch {
     }
 }
 
-// ── From impls for proto types ──
-
 impl From<DbCategory> for proto::Category {
     fn from(c: DbCategory) -> Self {
         proto::Category {
