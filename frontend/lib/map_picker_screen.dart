@@ -33,16 +33,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
+  static const _phnomPenh = LatLng(11.5564, 104.9282);
+
   LatLng _initialCenter() {
     if (widget.initialLat != null && widget.initialLng != null) {
       return LatLng(widget.initialLat!, widget.initialLng!);
     }
-    if (_branches.isNotEmpty) {
-      final avgLat = _branches.map((b) => b.lat).reduce((a, b) => a + b) / _branches.length;
-      final avgLng = _branches.map((b) => b.lng).reduce((a, b) => a + b) / _branches.length;
-      return LatLng(avgLat, avgLng);
-    }
-    return const LatLng(11.5564, 104.9282);
+    return _phnomPenh;
   }
 
   void _confirm() {

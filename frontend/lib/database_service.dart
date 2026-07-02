@@ -429,9 +429,11 @@ class DatabaseService {
     }
   }
 
-  static Future<void> batchPlaceOrder(
+  static Future<int> batchPlaceOrder(
     List<Map<String, dynamic>> items, {
     int? branchId,
+    double? deliveryLat,
+    double? deliveryLng,
   }) async {
     try {
       final reqList = $pb.OrderRequestList(
@@ -447,6 +449,12 @@ class DatabaseService {
       if (branchId != null) {
         reqList.branchId = $fixnum.Int64(branchId);
       }
+      if (deliveryLat != null) {
+        reqList.deliveryLat = deliveryLat;
+      }
+      if (deliveryLng != null) {
+        reqList.deliveryLng = deliveryLng;
+      }
       final response = await client
           .post(
             Uri.parse('$_normalizedBaseUrl/orders'),
@@ -460,6 +468,11 @@ class DatabaseService {
           'Server returned ${response.statusCode}: ${response.body}',
         );
       }
+
+      final created = $pb.CreateOrderResponse.fromBuffer(
+        response.bodyBytes.toList(),
+      );
+      return created.id.toInt();
     } catch (e) {
       log("Error placing order: $e");
       rethrow;

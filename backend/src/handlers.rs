@@ -1,5 +1,6 @@
 use actix_web::web::Data;
 use actix_web::{HttpResponse, delete, get, patch, post, put, web};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use futures_util::StreamExt;
 use rust_decimal::Decimal;
 use sqlx::Row;
@@ -11,6 +12,40 @@ use crate::error::AppError;
 use crate::models::*;
 use crate::proto;
 use crate::utils::*;
+
+#[post("/admin/register")]
+pub async fn new_admin(
+    claims: Claims,
+    config: Data<AppConfiguration>,
+    body: web::Bytes,
+) -> Result<HttpResponse, AppError> {
+    if claims.role != "admin" {
+        return Err(AppError::Forbidden("Admin access required".into()));
+    }
+
+    let form = decode_proto::<proto::RegisterRequest>(&body)?;
+    let hashed = hash(&form.password, DEFAULT_COST)?;
+    let res = sqlx::query_as::<_, User>(
+        "INSERT INTO users (email, name, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, password_hash, role, avatar",
+    )
+    .bind(&form.email)
+    .bind(&form.name)
+    .bind(&hashed)
+    .bind("admin")
+    .fetch_one(&config.db_pool)
+    .await;
+
+    match res {
+        Ok(u) => {
+            let resp = login_response(&u, &config.jwt_secret)?;
+            Ok(encode_proto_status(
+                &resp,
+                actix_web::http::StatusCode::CREATED,
+            ))
+        }
+        Err(e) => Err(AppError::Conflict(e.to_string())),
+    }
+}
 
 #[post("/register")]
 pub async fn register(
@@ -48,8 +83,6 @@ pub async fn login(
     config: Data<AppConfiguration>,
     body: web::Bytes,
 ) -> Result<HttpResponse, AppError> {
-    use bcrypt::verify;
-
     let form = decode_proto::<proto::LoginRequest>(&body)?;
     let user = sqlx::query_as::<_, User>(
         "SELECT id, email, name, password_hash, role, avatar FROM users WHERE email = $1",
@@ -138,7 +171,8 @@ pub async fn insert_product(
                 let file_extension = field
                     .content_disposition()
                     .and_then(|c| c.get_filename_ext().map(|s| s.to_string()))
-                    .unwrap_or("jpg".to_string());
+                    .unwrap_or("".to_string());
+
                 let _ = fs::create_dir_all("uploads/").await;
                 let file_name = Uuid::new_v4();
                 let path = format!("uploads/{}.{}", file_name, file_extension);
@@ -337,8 +371,6 @@ pub async fn list_products(
     Ok(encode_proto(&proto::ProductList { products }))
 }
 
-// ── Orders ──
-
 #[post("/orders")]
 pub async fn create_orders(
     claims: Claims,
@@ -374,12 +406,17 @@ pub async fn create_orders(
     }
 
     let branch_id = req_list.branch_id;
+    let delivery_lat = req_list.delivery_lat;
+    let delivery_lng = req_list.delivery_lng;
 
     let order_id = sqlx::query(
-        "INSERT INTO orders (user_id, status, total, branch_id) VALUES ($1, 'pending', 0, $2) RETURNING id",
+        "INSERT INTO orders (user_id, status, total, branch_id, delivery_lat, delivery_lng) \
+         VALUES ($1, 'pending', 0, $2, $3, $4) RETURNING id",
     )
     .bind(user_id)
     .bind(branch_id)
+    .bind(delivery_lat)
+    .bind(delivery_lng)
     .fetch_one(&mut *tx)
     .await?
     .get::<i64, _>("id");
@@ -421,7 +458,7 @@ pub async fn create_orders(
     tx.commit().await?;
 
     Ok(encode_proto_status(
-        &proto::Empty {},
+        &proto::CreateOrderResponse { id: order_id },
         actix_web::http::StatusCode::CREATED,
     ))
 }
@@ -438,7 +475,8 @@ pub async fn order_history(
     let orders = if claims.role == "admin" {
         sqlx::query_as::<_, OrderHistoryRow>(
             r#"
-            SELECT o.id, o.user_id, o.status, o.total, o.created_at, o.branch_id, u.name as user_name
+            SELECT o.id, o.user_id, o.status, o.total, o.created_at, o.branch_id,
+                   u.name as user_name, o.delivery_lat, o.delivery_lng
             FROM orders o
             JOIN users u ON o.user_id = u.id
             WHERE o.id < $1
@@ -453,7 +491,8 @@ pub async fn order_history(
     } else {
         sqlx::query_as::<_, OrderHistoryRow>(
             r#"
-            SELECT o.id, o.user_id, o.status, o.total, o.created_at, o.branch_id, u.name as user_name
+            SELECT o.id, o.user_id, o.status, o.total, o.created_at, o.branch_id,
+                   u.name as user_name, o.delivery_lat, o.delivery_lng
             FROM orders o
             JOIN users u ON o.user_id = u.id
             WHERE u.email = $1
@@ -517,6 +556,8 @@ pub async fn order_history(
                 items: proto_items,
                 branch_id: row.branch_id,
                 user_name: row.user_name,
+                delivery_lat: row.delivery_lat,
+                delivery_lng: row.delivery_lng,
             }
         })
         .collect();
@@ -661,8 +702,6 @@ pub async fn update_cart_item(
     Ok(encode_proto(&proto::Empty {}))
 }
 
-// ── Profile ──
-
 #[get("/profile")]
 pub async fn get_profile(
     claims: Claims,
@@ -755,8 +794,6 @@ pub async fn upload_avatar(
     }))
 }
 
-// ── Admin: Revenue ──
-
 #[get("/admin/revenue/monthly")]
 pub async fn get_monthly_revenue(
     claims: Claims,
@@ -796,8 +833,6 @@ pub async fn get_yearly_revenue(
         rows.into_iter().map(proto::YearlyRevenue::from).collect();
     Ok(encode_proto(&proto::YearlyRevenueList { revenues }))
 }
-
-// ── Admin: Categories ──
 
 #[get("/categories")]
 pub async fn list_categories(

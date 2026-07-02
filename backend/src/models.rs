@@ -11,6 +11,7 @@ pub struct OrderHistoryQuery {
 
 #[derive(Debug, Type, Serialize, Deserialize)]
 #[sqlx(type_name = "order_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum OrderStatus {
     Pending,
     Paid,
@@ -101,6 +102,8 @@ pub struct OrderHistoryRow {
     pub created_at: NaiveDateTime,
     pub branch_id: Option<i64>,
     pub user_name: String,
+    pub delivery_lat: Option<f64>,
+    pub delivery_lng: Option<f64>,
 }
 
 #[derive(Serialize, FromRow)]

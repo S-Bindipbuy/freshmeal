@@ -12,6 +12,6 @@ ALTER TABLE orders ADD COLUMN branch_id BIGINT NULL REFERENCES branches(id);
 CREATE INDEX idx_orders_branch_id ON orders(branch_id);
 
 INSERT INTO branches (name, address, lat, lng) VALUES
-  ('Freshmeal Downtown', '123 Main Street, Downtown', 3.1390, 101.6869),
-  ('Freshmeal Mall', '456 Shopping Ave, Mall Area', 3.1570, 101.7120),
-  ('Freshmeal Heights', '789 Hilltop Road, Heights', 3.1200, 101.6500);
+  ('Freshmeal Riverside', '#123 Sisowath Quay, Riverside', 11.5725, 104.9361),
+  ('Freshmeal BKK', '#456 Norodom Blvd, Boeung Keng Kang', 11.5433, 104.9195),
+  ('Freshmeal Toul Kork', '#789 Russian Blvd, Toul Kork', 11.5816, 104.9041);

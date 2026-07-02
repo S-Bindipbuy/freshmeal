@@ -121,6 +121,8 @@ message OrderHistoryItem {
   repeated OrderItem items = 6;
   optional int64 branch_id = 7;
   string user_name = 8;
+  optional double delivery_lat = 9;
+  optional double delivery_lng = 10;
 }
 
 message ProductList {
@@ -150,6 +152,12 @@ message AvatarResponse {
 message OrderRequestList {
   repeated OrderRequest requests = 1;
   optional int64 branch_id = 2;
+  optional double delivery_lat = 3;
+  optional double delivery_lng = 4;
+}
+
+message CreateOrderResponse {
+  int64 id = 1;
 }
 
 message Category {

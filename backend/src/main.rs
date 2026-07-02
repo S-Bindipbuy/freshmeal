@@ -40,6 +40,7 @@ async fn main() -> std::io::Result<()> {
             .service(update_product)
             .service(delete_product)
             .service(register)
+            .service(new_admin)
             .service(login)
             .service(create_orders)
             .service(order_history)

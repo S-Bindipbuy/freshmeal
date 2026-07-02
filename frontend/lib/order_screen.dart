@@ -163,6 +163,18 @@ class _OrderScreenState extends State<OrderScreen> {
       if (loggedIn != true) return;
     }
 
+    if (cart.deliveryLat == null || cart.deliveryLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please set a delivery location first"),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+      await _pickLocation();
+      if (cart.deliveryLat == null || cart.deliveryLng == null) return;
+    }
+
     try {
       await cart.checkout();
       if (mounted) {

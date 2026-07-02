@@ -128,7 +128,16 @@ class CartService extends ChangeNotifier {
       });
     }
 
-    await DatabaseService.batchPlaceOrder(reqList, branchId: _branchId);
+    final orderId = await DatabaseService.batchPlaceOrder(
+      reqList,
+      branchId: _branchId,
+      deliveryLat: _deliveryLat,
+      deliveryLng: _deliveryLng,
+    );
+
+    // auto-set status to paid
+    await DatabaseService.checkoutOrder(orderId);
+
     _items.clear();
     _branchId = null;
     _branchName = '';
